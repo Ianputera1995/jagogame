@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JAGO — Jejaring Aktif Gamifikasi Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--lav:#7c4dff;--lav-2:#bda8ff;--muted:#666}
+*{box-sizing:border-box}
+body{font-family:'Poppins',sans-serif;margin:0;background:linear-gradient(180deg,#f6f2ff,#fff);color:#222}
+.container{max-width:1100px;margin:18px auto;padding:16px}
+.header{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(90deg,#efe6ff,#fff)}
+.card{background:white;border-radius:12px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,0.06);margin-bottom:14px}
+.btn{background:var(--lav);color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.col{flex:1;min-width:260px}
+.small{font-size:0.9rem;color:var(--muted)}
+.preview-item{padding:10px;border-radius:10px;background:#faf5ff;margin-bottom:8px;position:relative}
+.actions{position:absolute;right:10px;top:10px}
+.hidden{display:none}
+.input,textarea,select{width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-top:6px}
+textarea{min-height:90px}
+.badge{display:inline-block;padding:6px 8px;border-radius:999px;background:linear-gradient(90deg,var(--lav),var(--lav-2));color:#fff;font-weight:600}
+.leader-item{display:flex;justify-content:space-between;padding:8px;border-radius:8px;background:#fbf8ff;margin-bottom:6px}
+.footer{padding:10px;text-align:center;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center}
+.modal .card{width:90%;max-width:520px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header card">
+    <div>
+      <h2>JAGO — Jejaring Aktif Gamifikasi Online</h2>
+      <div class="small">Belajar & Bermain — Jadilah Jagoannya!</div>
+    </div>
+    <div id="userBox" class="small">Belum login</div>
+  </div>
+
+  <!-- LOGIN (username & password stored in Spreadsheet) -->
+  <div id="loginCard" class="card">
+    <h3>Masuk</h3>
+    <div class="row">
+      <div class="col">
+        <input id="username" class="input" placeholder="Username" />
+        <input id="password" class="input" placeholder="Password" type="password" />
+        <button id="btnLogin" class="btn" style="margin-top:8px">Masuk</button>
+      </div>
+      <div class="col small">
+        <h4>Petunjuk</h4>
+        <p>Gunakan akun test: <b>ADMIN-KEY</b> / <b>GURU-KEY-1</b> / <b>SISWA-001</b> (masukkan password sesuai di Spreadsheet contoh).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP AREA -->
+  <div id="app" class="hidden">
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Admin Panel</h3>
+        <div><button id="btnLogout" class="btn">Logout</button></div>
+      </div>
+      <div class="row">
+        <div class="col card">
+          <h4>Tambah Pengguna</h4>
+          <input id="adm_name" class="input" placeholder="Nama" />
+          <input id="adm_username" class="input" placeholder="Username" />
+          <input id="adm_email" class="input" placeholder="Email" />
+          <select id="adm_role" class="input">
+            <option value="Siswa">Siswa</option>
+            <option value="Guru">Guru</option>
+            <option value="Admin">Admin</option>
+          </select>
+          <input id="adm_password" class="input" placeholder="Password" />
+          <button class="btn" onclick="adminAddUser()">Tambah Pengguna</button>
+        </div>
+
+        <div class="col card">
+          <h4>Kelola Konten</h4>
+          <div id="adminContentList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guru Panel -->
+    <div id="guruPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Dashboard Guru</h3>
+        <div><button id="btnLogout2" class="btn">Logout</button></div>
+      </div>
+
+      <div class="row">
+        <div class="col card">
+          <h4>Buat Kuis (pilihan ganda beberapa soal)</h4>
+          <input id="quizTitle" class="input" placeholder="Judul Kuis" />
+          <div id="quizQuestions"></div>
+          <button class="btn" onclick="addQuizQuestion()">+ Tambah Soal</button>
+          <input id="quizTime" class="input" placeholder="Waktu (detik)" />
+          <input id="quizXP" class="input" placeholder="XP Reward" />
+          <select id="quizBadge" class="input"><option value="">Pilih Badge</option><option>Penjelajah Kuis</option><option>Juara Arena</option><option>Pemain Aktif Mingguan</option></select>
+          <button class="btn" onclick="saveQuiz()">Simpan Kuis</button>
+        </div>
+
+        <div class="col card">
+          <h4>Preview & Kelola Kuis</h4>
+          <div id="previewQuizzes"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="col card">
+          <h4>Buat Arena 1 vs 1 (sistem gugur)</h4>
+          <input id="arenaTitle" class="input" placeholder="Judul Arena" />
+          <div id="arenaQuestions"></div>
+          <button class="btn" onclick="addArenaQuestion()">+ Tambah Soal Arena</button>
+          <input id="arenaTime" class="input" placeholder="Waktu (detik)" />
+          <input id="arenaXP" class="input" placeholder="XP Reward" />
+          <select id="arenaBadge" class="input"><option value="">Pilih Badge</option><option>Penjelajah Kuis</option><option>Juara Arena</option><option>Pemain Aktif Mingguan</option></select>
+          <button class="btn" onclick="saveArena()">Simpan Arena</button>
+        </div>
+
+        <div class="col card">
+          <h4>Preview Arena</h4>
+          <div id="previewArenaList"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="col card">
+          <h4>Tambah Media Belajar (dengan tes pemahaman)</h4>
+          <input id="mediaTitle" class="input" placeholder="Judul Media" />
+          <input id="mediaUrl" class="input" placeholder="URL / Embed (YouTube, Canva, Scratch...)" />
+          <div id="mediaQuestions"></div>
+          <button class="btn" onclick="addMediaQuestion()">+ Tambah Soal Tes</button>
+          <button class="btn" onclick="saveMedia()">Simpan Media</button>
+        </div>
+        <div class="col card">
+          <h4>Preview Media</h4>
+          <div id="previewMediaList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Siswa Panel -->
+    <div id="siswaPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Dashboard Siswa</h3>
+        <div><button id="btnLogout3" class="btn">Logout</button></div>
+      </div>
+
+      <div class="row">
+        <div class="col card">
+          <h4>Profil</h4>
+          <div id="studentProfile"></div>
+        </div>
+        <div class="col card">
+          <h4>Available Quizzes</h4>
+          <div id="studentQuizzes"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="col card">
+          <h4>Arena Top (Weekly)</h4>
+          <div id="arenaTop"></div>
+        </div>
+        <div class="col card">
+          <h4>Leaderboard XP Top 10</h4>
+          <div id="xpTop"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer small">"Ketika guru berinovasi, siswa ikut tumbuh — dan sekolah ikut bergerak maju."</div>
+</div>
+
+<!-- Modal (generic) -->
+<div id="modal" class="hidden"></div>
+
+<script>
+// ---------------- CONFIG
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzvwaZQh5CpXUTCpzeSsyKPtHI1PF-Blw68yaE8OCN_BS1XIBemrt_MFYrBejVk7JBFsQ/exec'; // Ganti setelah deploy
+
+function postAPI(payload){
+  if(!WEB_APP_URL || WEB_APP_URL.includes('REPLACE_WITH')) return Promise.resolve({demo:true, payload});
+  return fetch(WEB_APP_URL,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+  }).then(r=>r.json());
+}
+
+// ---------------- Helpers
+function q(sel, root=document){return root.querySelector(sel)}
+function qAll(sel, root=document){return Array.from(root.querySelectorAll(sel))}
+function show(id){q(id).classList.remove('hidden')}
+function hide(id){q(id).classList.add('hidden')}
+function setHTML(id,html){q(id).innerHTML=html}
+
+// ---------------- AUTH (username/password stored in Spreadsheet -> Apps Script checks)
+q('#btnLogin').addEventListener('click', async ()=>{
+  const username = q('#username').value.trim();
+  const password = q('#password').value;
+  if(!username || !password) return alert('Lengkapi username & password');
+  const res = await postAPI({action:'auth',username,password});
+  if(res && res.ok && res.user){
+    window.currentUser = res.user;
+    q('#userBox').textContent = `${res.user.Name} — ${res.user.Role}`;
+    q('#loginCard').classList.add('hidden');
+    q('#app').classList.remove('hidden');
+    renderRole(res.user.Role);
+    loadInitialData();
+  } else {
+    alert('Login gagal — periksa username/password');
+  }
+});
+
+q('#btnLogout').addEventListener('click', ()=>location.reload());
+q('#btnLogout2')?.addEventListener('click', ()=>location.reload());
+q('#btnLogout3')?.addEventListener('click', ()=>location.reload());
+
+function renderRole(role){
+  hide('#adminPanel'); hide('#guruPanel'); hide('#siswaPanel');
+  if(role==='Admin') show('#adminPanel');
+  if(role==='Guru') show('#guruPanel');
+  if(role==='Siswa') show('#siswaPanel');
+}
+
+// ---------------- Load initial data for previews and leaderboards
+async function loadInitialData(){
+  // get quizzes, media, arena, users
+  const [quizzes,media,arena,users,xp] = await Promise.all([
+    postAPI({action:'getQuizzes'}), postAPI({action:'getMedia'}), postAPI({action:'getArena'}), postAPI({action:'getUsers'}), postAPI({action:'getLeaderboard'})
+  ]).catch(e=>[ {demo:true} ]);
+
+  // render previews with demo fallback when needed
+  if(quizzes && quizzes.length) renderPreviewQuizzes(quizzes);
+  if(media && media.length) renderPreviewMedia(media);
+  if(arena && arena.length) renderPreviewArena(arena);
+  if(xp && xp.length) renderXPTop(xp);
+}
+
+// ---------------- Admin: add user
+async function adminAddUser(){
+  const name = q('#adm_name').value.trim();
+  const username = q('#adm_username').value.trim();
+  const email = q('#adm_email').value.trim();
+  const role = q('#adm_role').value;
+  const password = q('#adm_password').value;
+  if(!username||!name||!email||!password) return alert('Lengkapi data');
+  const res = await postAPI({action:'saveUser',username, name, email, role, password});
+  if(res && res.ok){ alert('Pengguna ditambahkan'); q('#adm_name').value=''; q('#adm_username').value=''; q('#adm_email').value=''; q('#adm_password').value=''; }
+  else alert('Gagal menambahkan pengguna');
+}
+
+// ---------------- Guru: quiz functions
+function addQuizQuestion(){
+  const container = q('#quizQuestions');
+  const div = document.createElement('div'); div.className='preview-item';
+  div.innerHTML = `
+    <textarea placeholder='Soal (panjang OK)'></textarea>
+    <input placeholder='Opsi A' />
+    <input placeholder='Opsi B' />
+    <input placeholder='Opsi C' />
+    <input placeholder='Opsi D' />
+    <input placeholder='Jawaban benar (A/B/C/D)' />
+    <div style='margin-top:6px'><button onclick='this.closest(".preview-item").remove()'>Hapus Soal</button></div>
+  `;
+  container.appendChild(div);
+}
+
+async function saveQuiz(){
+  const title = q('#quizTitle').value.trim();
+  if(!title) return alert('Judul kosong');
+  const nodes = qAll('.preview-item', q('#quizQuestions'));
+  if(nodes.length===0) return alert('Tambahkan soal');
+  const questions = nodes.map(n=>{
+    const t = n.querySelector('textarea').value;
+    const ins = Array.from(n.querySelectorAll('input'));
+    const choices = ins.slice(0,4).map(i=>i.value);
+    const ans = ins[4].value;
+    return {q:t, choices, ans};
+  });
+  const payload = {action:'saveQuiz', title, questions, time: Number(q('#quizTime').value)||60, xp: Number(q('#quizXP').value)||10, badge:q('#quizBadge').value, author: window.currentUser.Username};
+  const res = await postAPI(payload);
+  if(res && res.ok){ alert('Kuis tersimpan'); renderLocalQuizPreview(payload); clearQuizForm(); }
+  else if(res && res.demo){ renderLocalQuizPreview(payload); clearQuizForm(); alert('Demo mode: tersimpan lokal'); }
+  else alert('Gagal simpan kuis');
+}
+
+function renderLocalQuizPreview(obj){
+  const container = q('#previewQuizzes');
+  const div = document.createElement('div'); div.className='preview-item';
+  div.innerHTML = `<strong>${obj.title}</strong><div>${obj.questions.length} soal • XP ${obj.xp} • Badge: ${obj.badge||'-'}</div><div class='actions'><button onclick='editQuiz(this)'>✏️</button><button onclick='deleteQuiz(this)'>🗑️</button></div>`;
+  container.prepend(div);
+}
+function clearQuizForm(){ q('#quizTitle').value=''; q('#quizQuestions').innerHTML=''; q('#quizTime').value=''; q('#quizXP').value=''; q('#quizBadge').value=''; }
+function editQuiz(btn){ alert('Fitur edit kuis akan membuka modal edit — implementasi bisa dilanjutkan.'); }
+function deleteQuiz(btn){ if(confirm('Hapus kuis?')) btn.closest('.preview-item').remove(); }
+
+// ---------------- Arena functions (similar)
+function addArenaQuestion(){
+  const container = q('#arenaQuestions');
+  const div = document.createElement('div'); div.className='preview-item';
+  div.innerHTML = `<textarea placeholder='Soal arena'></textarea><input placeholder='Opsi A'/><input placeholder='Opsi B'/><input placeholder='Opsi C'/><input placeholder='Opsi D'/><input placeholder='Jawaban benar (A/B/C/D)'/><div style='margin-top:6px'><button onclick='this.closest(".preview-item").remove()'>Hapus Soal</button></div>`;
+  container.appendChild(div);
+}
+async function saveArena(){
+  const title=q('#arenaTitle').value.trim(); if(!title) return alert('Judul arena kosong');
+  const nodes = qAll('.preview-item', q('#arenaQuestions'));
+  if(nodes.length===0) return alert('Tambahkan soal arena');
+  const questions = nodes.map(n=>{const t=n.querySelector('textarea').value; const ins=Array.from(n.querySelectorAll('input')); return {q:t,choices:ins.slice(0,4).map(i=>i.value),ans:ins[4].value};});
+  const payload={action:'saveArena',title,questions,time:Number(q('#arenaTime').value)||60,xp:Number(q('#arenaXP').value)||10,badge:q('#arenaBadge').value,author:window.currentUser.Username};
+  const res=await postAPI(payload);
+  if(res && res.ok){ alert('Arena tersimpan'); renderLocalArenaPreview(payload); q('#arenaTitle').value=''; q('#arenaQuestions').innerHTML=''; }
+  else if(res && res.demo){ renderLocalArenaPreview(payload); alert('Demo: tersimpan lokal'); }
+}
+function renderLocalArenaPreview(obj){ const c=q('#previewArenaList'); const d=document.createElement('div'); d.className='preview-item'; d.innerHTML=`<strong>${obj.title}</strong><div>${obj.questions.length} soal • XP ${obj.xp}</div><div class='actions'><button onclick='editArena(this)'>✏️</button><button onclick='deleteArena(this)'>🗑️</button></div>`; c.prepend(d);} 
+function editArena(btn){ alert('Edit arena (modal)'); } function deleteArena(btn){ if(confirm('Hapus arena?')) btn.closest('.preview-item').remove(); }
+
+// ---------------- Media functions
+function addMediaQuestion(){ const c=q('#mediaQuestions'); const d=document.createElement('div'); d.className='preview-item'; d.innerHTML=`<textarea placeholder='Soal pemahaman'></textarea><input placeholder='Opsi A'/><input placeholder='Opsi B'/><input placeholder='Opsi C'/><input placeholder='Opsi D'/><input placeholder='Jawaban benar (A/B/C/D)'/><div style='margin-top:6px'><button onclick='this.closest(".preview-item").remove()'>Hapus Soal</button></div>`; c.appendChild(d); }
+async function saveMedia(){ const title=q('#mediaTitle').value.trim(); const url=q('#mediaUrl').value.trim(); if(!title||!url) return alert('Judul atau URL kosong'); const nodes=qAll('.preview-item',q('#mediaQuestions'))||[]; const questions=nodes.map(n=>{const t=n.querySelector('textarea').value; const ins=Array.from(n.querySelectorAll('input')); return {q:t,choices:ins.slice(0,4).map(i=>i.value),ans:ins[4].value}}); const payload={action:'saveMedia',title,url,questions,author:window.currentUser.Username}; const res=await postAPI(payload); if(res&&res.ok){ alert('Media tersimpan'); renderLocalMediaPreview(payload); q('#mediaTitle').value=''; q('#mediaUrl').value=''; q('#mediaQuestions').innerHTML=''; } else if(res && res.demo){ renderLocalMediaPreview(payload); alert('Demo: tersimpan lokal'); } }
+function renderLocalMediaPreview(obj){ const c=q('#previewMediaList'); const d=document.createElement('div'); d.className='preview-item'; let embed=''; if(obj.url.includes('youtube.com')){ const id = obj.url.split('v=')[1]||''; embed=`<iframe width='100%' height='220' src='https://www.youtube.com/embed/${id}' frameborder='0' allowfullscreen sandbox='allow-scripts allow-same-origin allow-popups'></iframe>`;} else { embed=`<a href='${obj.url}' target='_blank'>Buka media</a>`;} d.innerHTML=`<strong>${obj.title}</strong>${embed}<div class='actions'><button onclick='editMedia(this)'>✏️</button><button onclick='deleteMedia(this)'>🗑️</button></div>`; c.prepend(d); }
+function editMedia(btn){ alert('Edit media (modal)'); } function deleteMedia(btn){ if(confirm('Hapus media?')) btn.closest('.preview-item').remove(); }
+
+// ---------------- Student: render profile, quizzes, leaderboards
+function renderStudentProfile(user){ const c=q('#studentProfile'); c.innerHTML=`<div><strong>${user.Name}</strong></div><div>Level: ${user.Level||1} • XP: ${user.XP||0}</div><div style='margin-top:8px'>Badges: <span class='badge'>${user.Badges||'-'}</span></div>`; }
+
+async function loadStudentQuizzes(){ const res = await postAPI({action:'getQuizzes'}); if(res && res.length){ const c=q('#studentQuizzes'); c.innerHTML=''; res.forEach((qz,i)=>{ const div=document.createElement('div'); div.className='preview-item'; div.innerHTML=`<strong>${qz.Title}</strong><div>${ (JSON.parse(qz.Questions||'[]')).length } soal • XP ${qz.XP||0}</div><div class='actions'><button onclick='startQuiz(${i})' class='btn'>Mulai</button></div>`; c.appendChild(div); }); } }
+
+function renderXPTop(list){ const c=q('#xpTop'); c.innerHTML=''; (list||[]).slice(0,10).forEach(it=>{ const div=document.createElement('div'); div.className='leader-item'; div.innerHTML=`<span>${it.Username}</span><span>${it.XP} XP</span>`; c.appendChild(div); }); }
+
+// ---------------- START Quiz (simple in-page runner, time & scoring)
+async function startQuiz(index){ // fetch quizzes then run
+  const res = await postAPI({action:'getQuizzes'});
+  const qz = res[index];
+  if(!qz) return alert('Kuis tidak ditemukan');
+  const questions = JSON.parse(qz.Questions||'[]');
+  runQuizModal(qz.Title, questions, qz.XP||0, qz.Badge||'');
+}
+
+function runQuizModal(title, questions, xpReward, badge){
+  // simple modal UI
+  const modal = document.createElement('div'); modal.className='modal';
+  let idx=0; let score=0; let total=questions.length; let timePer=60;
+  modal.innerHTML = `<div class='card'><h3>${title}</h3><div id='qBody'></div><div style='margin-top:10px'><button id='nextBtn' class='btn'>Next</button> <button id='closeBtn' class='btn' style='background:#ccc;color:#000'>Batal</button></div></div>`;
+  document.body.appendChild(modal);
+  const qBody = modal.querySelector('#qBody');
+  function renderQ(){ const qn=questions[idx]; qBody.innerHTML = `<div><p><strong>Soal ${idx+1} / ${total}</strong></p><p>${qn.q}</p>${qn.choices.map((c,i)=>`<div><label><input type='radio' name='opt' value='${String.fromCharCode(65+i)}'/> ${c}</label></div>`).join('')}</div>`; }
+  renderQ();
+  modal.querySelector('#nextBtn').addEventListener('click', ()=>{ const sel = modal.querySelector('input[name=opt]:checked'); if(sel && sel.value === questions[idx].ans){ score++; } idx++; if(idx>=total){ // selesai
+      alert(`Selesai! Skor ${score}/${total} — XP +${xpReward}`);
+      document.body.removeChild(modal);
+      // save attempt
+      postAPI({action:'saveAttempt', user:window.currentUser.Username, quizTitle:title, score, total, xp: xpReward, badge});
+    } else renderQ(); });
+  modal.querySelector('#closeBtn').addEventListener('click', ()=>{ document.body.removeChild(modal); });
+}
+
+// ---------------- Save attempt handler handled in backend
+
+// ---------------- On load helpers
+async function loadInitialUserViews(){ if(window.currentUser){ if(window.currentUser.Role==='Siswa'){ renderStudentProfile(window.currentUser); await loadStudentQuizzes(); } }
+}
+
+// wrapper to call when logged in
+async function renderRole(role){ renderRoleUI(role); await loadInitialUserViews(); }
+function renderRoleUI(role){ renderRole(role); }
+
+// ---------------- Init function used after successful login to re-render data
+async function renderRole(role){ renderRoleUI(role); loadInitialData(); if(role==='Siswa'){ renderStudentProfile(window.currentUser); loadStudentQuizzes(); } }
+
+</script>
+</body>
+</html>
+```
+
+---
