@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JAGO - Dashboard</title>
+<style>
+body{font-family:sans-serif;background:#f6f2ff;margin:0;padding:0}
+.container{max-width:900px;margin:16px auto;padding:12px}
+.card{background:white;border-radius:12px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin-bottom:14px}
+.input,textarea,select{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #ddd}
+textarea{min-height:80px}
+.btn{background:#7c4dff;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+.preview-item{padding:10px;background:#faf5ff;border-radius:8px;margin-bottom:6px;position:relative}
+.actions{position:absolute;right:10px;top:10px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div id="loginCard" class="card">
+    <h3>Login</h3>
+    <input id="username" class="input" placeholder="Username">
+    <input id="password" class="input" placeholder="Password" type="password">
+    <button class="btn" id="btnLogin">Masuk</button>
+  </div>
+
+  <div id="app" class="hidden">
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="card hidden">
+      <h3>Admin Panel</h3>
+      <button class="btn" id="btnLogout">Logout</button>
+      <h4>Tambah Pengguna</h4>
+      <input id="adm_name" class="input" placeholder="Nama">
+      <input id="adm_username" class="input" placeholder="Username">
+      <input id="adm_email" class="input" placeholder="Email">
+      <select id="adm_role" class="input">
+        <option value="Siswa">Siswa</option>
+        <option value="Guru">Guru</option>
+        <option value="Admin">Admin</option>
+      </select>
+      <input id="adm_password" class="input" placeholder="Password">
+      <button class="btn" onclick="adminAddUser()">Tambah Pengguna</button>
+    </div>
+
+    <!-- Guru Panel -->
+    <div id="guruPanel" class="card hidden">
+      <h3>Dashboard Guru</h3>
+      <button class="btn" id="btnLogout2">Logout</button>
+      <h4>Buat Kuis</h4>
+      <input id="quizTitle" class="input" placeholder="Judul Kuis">
+      <div id="quizQuestions"></div>
+      <button class="btn" onclick="addQuizQuestion()">+ Tambah Soal</button>
+      <input id="quizTime" class="input" placeholder="Waktu (detik)">
+      <input id="quizXP" class="input" placeholder="XP Reward">
+      <select id="quizBadge" class="input">
+        <option value="">Pilih Badge</option>
+        <option>Penjelajah Kuis</option>
+        <option>Juara Arena</option>
+        <option>Pemain Aktif Mingguan</option>
+      </select>
+      <button class="btn" onclick="saveQuiz()">Simpan Kuis</button>
+
+      <h4>Preview Kuis</h4>
+      <div id="previewQuizzes"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx7yqepVcuZqCPYuGZgySoYwym1t3DkRqlhHTjOicYIRWlulMLS72nvGQJtBI5k7sLQew/exec'; // ganti dengan Web App URL
+
+async function postAPI(payload){
+  return fetch(WEB_APP_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(r=>r.json());
+}
+
+// Login
+document.getElementById('btnLogin').addEventListener('click', async()=>{
+  const username=document.getElementById('username').value.trim();
+  const password=document.getElementById('password').value;
+  if(!username || !password) return alert('Lengkapi username & password');
+  const res = await postAPI({action:'auth',username,password});
+  if(res.ok){
+    window.currentUser = res.user;
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    renderRole(res.user.Role);
+  } else alert('Login gagal');
+});
+
+// Logout
+document.getElementById('btnLogout')?.addEventListener('click',()=>location.reload());
+document.getElementById('btnLogout2')?.addEventListener('click',()=>location.reload());
+
+// Render panel sesuai role
+function renderRole(role){
+  document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('guruPanel').classList.add('hidden');
+  if(role==='Admin') document.getElementById('adminPanel').classList.remove('hidden');
+  if(role==='Guru') document.getElementById('guruPanel').classList.remove('hidden');
+}
+
+// Admin add user
+async function adminAddUser(){
+  const name=document.getElementById('adm_name').value.trim();
+  const username=document.getElementById('adm_username').value.trim();
+  const email=document.getElementById('adm_email').value.trim();
+  const role=document.getElementById('adm_role').value;
+  const password=document.getElementById('adm_password').value;
+  if(!name||!username||!role||!password) return alert('Lengkapi data');
+  const res = await postAPI({action:'saveUser',username,name,email,role,password});
+  if(res.ok){ alert('Pengguna ditambahkan'); 
+    document.getElementById('adm_name').value='';
+    document.getElementById('adm_username').value='';
+    document.getElementById('adm_email').value='';
+    document.getElementById('adm_password').value='';
+  } else alert('Gagal menambahkan pengguna');
+}
+
+// Guru add quiz
+function addQuizQuestion(){
+  const container=document.getElementById('quizQuestions');
+  const div=document.createElement('div'); div.className='preview-item';
+  div.innerHTML=`<textarea placeholder='Soal'></textarea>
+    <input placeholder='Opsi A'>
+    <input placeholder='Opsi B'>
+    <input placeholder='Opsi C'>
+    <input placeholder='Opsi D'>
+    <input placeholder='Jawaban benar (A/B/C/D)'>
+    <div class='actions'><button onclick='this.closest(".preview-item").remove()'>Hapus Soal</button></div>`;
+  container.appendChild(div);
+}
+
+async function saveQuiz(){
+  const title=document.getElementById('quizTitle').value.trim();
+  if(!title) return alert('Judul kosong');
+  const nodes=document.querySelectorAll('.preview-item');
+  if(nodes.length===0) return alert('Tambahkan soal');
+  const questions = Array.from(nodes).map(n=>{
+    const t=n.querySelector('textarea').value;
+    const ins = Array.from(n.querySelectorAll('input'));
+    return {q:t,choices:ins.slice(0,4).map(i=>i.value),ans:ins[4].value};
+  });
+  const payload = {action:'saveQuiz',Title:title,Questions:questions,Time:Number(document.getElementById('quizTime').value)||60,
+  XP:Number(document.getElementById('quizXP').value)||10,Badge:document.getElementById('quizBadge').value};
+  const res = await postAPI(payload);
+  if(res.ok){ alert('Kuis tersimpan'); renderLocalQuizPreview(payload); clearQuizForm(); }
+  else alert('Gagal simpan kuis');
+}
+
+function renderLocalQuizPreview(obj){
+  const container=document.getElementById('previewQuizzes');
+  const div=document.createElement('div'); div.className='preview-item';
+  div.innerHTML=`<strong>${obj.Title}</strong> • ${obj.Questions.length} soal • XP ${obj.XP} • Badge: ${obj.Badge||'-'}
+  <div class='actions'><button onclick='this.remove()'>🗑️</button></div>`;
+  container.prepend(div);
+}
+
+function clearQuizForm(){
+  document.getElementById('quizTitle').value='';
+  document.getElementById('quizQuestions').innerHTML='';
+  document.getElementById('quizTime').value='';
+  document.getElementById('quizXP').value='';
+  document.getElementById('quizBadge').value='';
+}
+</script>
+</body>
+</html>
